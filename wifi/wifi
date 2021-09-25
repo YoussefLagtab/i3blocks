@@ -20,19 +20,26 @@ if [[ -z "$INTERFACE" ]] ; then
 fi
 #------------------------------------------------------------------------
 
-COLOR_GE80=${COLOR_GE80:-#00FF00}
-COLOR_GE60=${COLOR_GE60:-#FFF600}
+COLOR_GE80=${COLOR_GE80:-#1de9b6}
+COLOR_GE60=${COLOR_GE60:-#ffca28}
 COLOR_GE40=${COLOR_GE40:-#FFAE00}
-COLOR_LOWR=${COLOR_LOWR:-#FF0000}
-COLOR_DOWN=${COLOR_DOWN:-#FF0000}
+COLOR_LOWR=${COLOR_LOWR:-#ff7043}
+COLOR_DOWN=${COLOR_DOWN:-#ff7043}
 
 # As per #36 -- It is transparent: e.g. if the machine has no battery or wireless
 # connection (think desktop), the corresponding block should not be displayed.
 [[ ! -d /sys/class/net/${INTERFACE}/wireless ]] && exit
 
+
+# get ip address --------------------------------------------------------
+
+ip=$(bash ~/.config/i3blocks/iface/iface)
+
+#------------------------------------------------------------------------
+
 # If the wifi interface exists but no connection is active, "down" shall be displayed.
-if [[ "$(cat /sys/class/net/$INTERFACE/operstate)" = 'down' ]]; then
-    echo "down"
+if [[ "$(cat /sys/class/net/$INTERFACE/operstate)" = 'down' && -z $ip ]]; then
+	echo "W: down"
     echo "down"
     echo $COLOR_DOWN
     exit
@@ -43,10 +50,14 @@ fi
 QUALITY=$(iw dev ${INTERFACE} link | grep 'dBm$' | grep -Eoe '-[0-9]{2}' | awk '{print  ($1 > -50 ? 100 :($1 < -100 ? 0 : ($1+100)*2))}')
 
 #------------------------------------------------------------------------
-
-echo $QUALITY% # full text
-echo $QUALITY% # short text
-
+if [[ ! -z $QUALITY ]]; then
+	echo $QUALITY% \($(nmcli -t -f active,ssid dev wifi | egrep '^yes' | cut -d: -f2)\) [$ip] # full text
+	echo $QUALITY% \($(nmcli -t -f active,ssid dev wifi | egrep '^yes' | cut -d: -f2)\) [$ip] # short text
+else
+	echo E: [$ip]
+	echo $ip
+	echo $COLOR_GE80 
+fi
 # color
 if [[ $QUALITY -ge 80 ]]; then
     echo $COLOR_GE80
